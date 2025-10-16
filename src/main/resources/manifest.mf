@@ -1,0 +1,8 @@
+Main-Class: TestTube
+Class-Path: libs/org.apiguardian_apiguardian-api_1.1.2.jar
+    libs/org.junit.platform_junit-platform-launcher_1.13.0-M3.jar
+    libs/org.opentest4j_opentest4j_1.3.0.jar
+    libs/org.junit.jupiter_junit-jupiter-api_5.13.0-M3.jar
+    libs/org.junit.platform_junit-platform-commons_1.13.0-M3.jar
+    libs/org.junit.jupiter_junit-jupiter-engine_5.13.0-M3.jar
+    libs/org.junit.platform_junit-platform-engine_1.13.0-M3.jar
