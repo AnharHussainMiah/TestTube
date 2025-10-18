@@ -1,4 +1,4 @@
-Main-Class: TestTube
+Main-Class: org.grind.TestTube
 Class-Path: libs/org.apiguardian_apiguardian-api_1.1.2.jar
     libs/org.junit.platform_junit-platform-launcher_1.13.0-M3.jar
     libs/org.opentest4j_opentest4j_1.3.0.jar

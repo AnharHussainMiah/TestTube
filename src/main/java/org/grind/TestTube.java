@@ -1,3 +1,5 @@
+package org.grind;
+
 import org.junit.platform.engine.DiscoverySelector;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
 import org.junit.platform.engine.TestExecutionResult;
