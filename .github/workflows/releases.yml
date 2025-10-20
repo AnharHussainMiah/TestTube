@@ -59,6 +59,7 @@ jobs:
           path: TestTube.zip
 
   release:
+    needs: build
     name: Create GitHub Release
     runs-on: ubuntu-latest
 
