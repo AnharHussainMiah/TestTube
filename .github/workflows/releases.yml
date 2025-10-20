@@ -23,7 +23,7 @@ jobs:
           java-version: '17'
 
       - name: download Grind tool
-        run: wget -O grind https://github.com/AnharHussainMiah/grind/releases/download/v0.6.0-alpha/grind-x86_64-unknown-linux-musl
+        run: wget -O grind https://github.com/AnharHussainMiah/grind/releases/download/v0.6.1-alpha/grind-x86_64-unknown-linux-musl
 
       - name: Make binary executable
         run: chmod +x grind
