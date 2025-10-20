@@ -50,7 +50,7 @@ jobs:
         run: grind integrity generate libs/
 
       - name: Zip it up
-        run: zip -r TestTube.zip plugins/
+        run: zip -r TestTube.zip plugin/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
