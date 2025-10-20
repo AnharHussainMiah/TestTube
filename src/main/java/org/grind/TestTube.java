@@ -1,336 +1,110 @@
 package org.grind;
 
-import org.junit.platform.engine.DiscoverySelector;
-import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.*;
-import org.junit.platform.launcher.core.LauncherConfig;
-import org.junit.platform.launcher.core.LauncherFactory;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Assertions;
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import org.junit.platform.launcher.core.*;
+import org.junit.platform.engine.discovery.*;
+import org.junit.platform.reporting.legacy.xml.*;
+import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 
+import java.io.File;
 import java.io.PrintWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
-import java.time.Instant; // For precise time tracking
-import java.time.temporal.ChronoUnit; // For calculating duration
-import java.util.stream.Collectors;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
+import java.util.*;
 
-/**
- * A simple standalone Command Line Interface (CLI) Runner using the JUnit Platform API.
- * The name 'Cupping' refers to the professional method of tasting and evaluating coffee
- * quality, implying a rigorous assessment of the code's behavior.
- *
- * To compile and run, you need the following JUnit dependencies on your classpath:
- * 1. junit-platform-launcher
- * 2. junit-jupiter-api
- * 3. junit-jupiter-engine
- *
- * Example Usage (assuming you compile and run from a terminal):
- *
- * 1. Run all profiles in the current directory (where compiled .class files live):
- * java -cp .:<path_to_junit_jars> Cupping --all
- *
- * 2. Run specific classes:
- * java -cp .:<path_to_junit_jars> Cupping com.example.MyTestClass org.project.AnotherProfile
- *
- * 3. Run the default internal Cupping Sample:
- * java -cp .:<path_to_junit_jars> Cupping
- */
+
 public class TestTube {
 
-    // --- 1. Custom Execution Listener for CLI Reporting ---
-
-    /**
-     * A simple implementation of TestExecutionListener to report execution results
-     * to the console in a human-readable format, like a quality report.
-     */
-    static class SimpleTestExecutionListener implements TestExecutionListener {
-        private final PrintWriter out = new PrintWriter(System.out);
-        private int testCount = 0;
-        private int failures = 0;
-
-        @Override
-        public void testPlanExecutionStarted(TestPlan testPlan) {
-            testCount = (int) testPlan.countTestIdentifiers(TestIdentifier::isTest);
-            out.println(">>> ⏱️  Starting Code Cupping Assessment <<<");
-            out.printf("Total profiles discovered: %d%n", testCount);
-            out.println("----------------------------------------");
-            out.flush();
-        }
-
-        @Override
-        public void executionStarted(TestIdentifier testIdentifier) {
-            if (testIdentifier.isTest()) {
-                out.printf("  🫖 Brewing profile: %s%n", testIdentifier.getDisplayName());
-                out.flush();
-            }
-        }
-
-        @Override
-        public void executionFinished(TestIdentifier testIdentifier, TestExecutionResult testExecutionResult) {
-            if (testIdentifier.isTest()) {
-                if (testExecutionResult.getStatus() == TestExecutionResult.Status.FAILED) {
-                    failures++;
-                    out.printf("  ❌ [FAULT] Profile '%s' failed cupping!%n", testIdentifier.getDisplayName());
-                    testExecutionResult.getThrowable().ifPresent(t -> {
-                        out.printf("    Reason (Flavor Note): %s%n", t.getMessage());
-                        // t.printStackTrace(out); // Uncomment for full stack trace
-                    });
-                    out.flush();
-                } else if (testExecutionResult.getStatus() == TestExecutionResult.Status.ABORTED) {
-                    out.printf("  ⏩ [SKIPPED] Profile '%s' aborted assessment.%n", testIdentifier.getDisplayName());
-                    out.flush();
-                } else {
-                    out.printf("  ✅ [CLEAN] Profile '%s' passed assessment.%n", testIdentifier.getDisplayName());
-                    out.flush();
-                }
-            }
-        }
-
-        @Override
-        public void testPlanExecutionFinished(TestPlan testPlan) {
-            out.println("----------------------------------------");
-            out.printf(">>> ✅ Cupping Assessment Complete <<<%n");
-            out.printf("Profiles Evaluated: %d, Faults Detected: %d%n", testCount, failures);
-            out.flush();
-        }
-    }
-
-    // --- 2. JUnit XML Report Generation Listener ---
-
-    /**
-     * Generates a simplified JUnit XML report for CI/CD tools.
-     * The report is written to a file specified by outputFileName.
-     */
-    static class JUnitXmlReportListener implements TestExecutionListener {
-        private final String outputFileName;
-        private final Map<TestIdentifier, Instant> startTimeMap = new ConcurrentHashMap<>();
-        private final List<String> testCaseXml = new CopyOnWriteArrayList<>();
-
-        private Instant suiteStartTime;
-        private Instant suiteEndTime;
+    public static void main(String[] args) throws Exception {
+        List<String> testClassNames = Arrays.asList(args).subList(0, args.length);
         
-        private final AtomicLong totalTests = new AtomicLong(0);
-        private final AtomicLong totalFailures = new AtomicLong(0);
-        private final AtomicLong totalSkipped = new AtomicLong(0);
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
 
-        public JUnitXmlReportListener(String outputFileName) {
-            this.outputFileName = outputFileName;
-        }
+        // Build test discovery request
+        LauncherDiscoveryRequestBuilder requestBuilder = LauncherDiscoveryRequestBuilder.request();
 
-        @Override
-        public void testPlanExecutionStarted(TestPlan testPlan) {
-            suiteStartTime = Instant.now();
-        }
+        // System.out.println("Effective classpath:");
+        // System.out.println(System.getProperty("java.class.path"));
 
-        @Override
-        public void testPlanExecutionFinished(TestPlan testPlan) {
-            suiteEndTime = Instant.now();
-            writeReport();
-        }
-
-        @Override
-        public void executionStarted(TestIdentifier testIdentifier) {
-            if (testIdentifier.isTest()) {
-                startTimeMap.put(testIdentifier, Instant.now());
+        if (!testClassNames.isEmpty()) {
+            for (String className : testClassNames) {
+                System.out.println("Adding Class -> " + className);
+                requestBuilder.selectors(DiscoverySelectors.selectClass(className));
             }
-        }
-
-        @Override
-        public void executionFinished(TestIdentifier testIdentifier, TestExecutionResult testExecutionResult) {
-            if (testIdentifier.isTest()) {
-                totalTests.incrementAndGet();
-                
-                Instant start = startTimeMap.getOrDefault(testIdentifier, Instant.EPOCH);
-                long durationMillis = ChronoUnit.MILLIS.between(start, Instant.now());
-                double durationSeconds = durationMillis / 1000.0;
-                
-                String className = testIdentifier.getParentId().orElse("UnknownClass");
-                String methodName = testIdentifier.getDisplayName();
-                
-                StringBuilder testCase = new StringBuilder();
-                testCase.append(String.format(
-                    "<testcase name=\"%s\" classname=\"%s\" time=\"%.3f\"", 
-                    methodName, className, durationSeconds));
-
-                if (testExecutionResult.getStatus() == TestExecutionResult.Status.FAILED) {
-                    totalFailures.incrementAndGet();
-                    testCase.append(">");
-                    testExecutionResult.getThrowable().ifPresent(t -> {
-                        String message = escapeXml(t.getMessage() != null ? t.getMessage() : "Unknown Fault");
-                        String type = t.getClass().getName();
-                        testCase.append(String.format("<failure message=\"%s\" type=\"%s\"/>", message, type));
-                    });
-                    testCase.append("</testcase>");
-                } else if (testExecutionResult.getStatus() == TestExecutionResult.Status.ABORTED) {
-                    totalSkipped.incrementAndGet();
-                    testCase.append(">");
-                    testCase.append("<skipped/>");
-                    testCase.append("</testcase>");
-                } else {
-                    // Successful test
-                    testCase.append("/>"); 
-                }
-                
-                testCaseXml.add(testCase.toString());
-            }
-        }
-
-        /**
-         * Writes the collected test case XML into the final <testsuite> structure.
-         */
-        private void writeReport() {
-            StringBuilder xml = new StringBuilder();
-            xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            
-            // Calculate overall time
-            long durationMillis = ChronoUnit.MILLIS.between(suiteStartTime, suiteEndTime);
-            double durationSeconds = durationMillis / 1000.0;
-            
-            // Root <testsuite> element
-            xml.append(String.format(
-                "<testsuite name=\"CodeCuppingSuite\" tests=\"%d\" failures=\"%d\" skipped=\"%d\" time=\"%.3f\">%n",
-                totalTests.get(), totalFailures.get(), totalSkipped.get(), durationSeconds));
-
-            // Append all testcase elements
-            for (String testCase : testCaseXml) {
-                xml.append(testCase).append("\n");
-            }
-
-            // Close root
-            xml.append("</testsuite>\n");
-            
-            // Write to file
-            try (FileWriter writer = new FileWriter(outputFileName)) {
-                writer.write(xml.toString());
-                System.out.println("\n[XML REPORT] Generated JUnit XML report at: " + outputFileName);
-            } catch (IOException e) {
-                System.err.println("Error writing XML report:");
-                e.printStackTrace();
-            }
-        }
-
-        /**
-         * Simple XML escaping for attributes and content.
-         */
-        private String escapeXml(String text) {
-            return text.replace("&", "&amp;")
-                       .replace("<", "&lt;")
-                       .replace(">", "&gt;")
-                       .replace("\"", "&quot;")
-                       .replace("'", "&apos;");
-        }
-    }
-
-
-    // --- 3. Main Cupping Logic ---
-
-    public static void main(String[] args) {
-        List<DiscoverySelector> selectors;
-        String profilesRunDescription;
-
-        if (args.length > 0 && args[0].equalsIgnoreCase("--all")) {
-            // Mode 1: Scan current classpath root.
-            // FIX: Stream the specialized List<ClasspathRootSelector> to a List<DiscoverySelector>.
-            selectors = DiscoverySelectors.selectClasspathRoots(Set.of(Path.of(".")))
-                .stream()
-                .collect(Collectors.toList()); // This resolves the List<E> to List<T> issue
-            
-            profilesRunDescription = "Scanning current directory for all available profiles.";
-            System.out.println("Running Cupping in **--all** mode.");
-        } else if (args.length == 0) {
-            // Mode 2: Default, run internal sample. (List.of is correct here, as it contains one selector)
-            String sampleName = CuppingSample.class.getName();
-            selectors = List.of(DiscoverySelectors.selectClass(sampleName));
-            profilesRunDescription = "Running internal Cupping Sample: " + sampleName;
-            System.out.println("No arguments provided. Running internal Cupping Sample.");
-            System.out.println("Use '--all' to scan for all profiles, or pass fully qualified class names.");
         } else {
-            // Mode 3: Specific class names provided. (Stream collects to a List, which is correct)
-            List<String> profileSourceNames = Arrays.asList(args);
-            selectors = profileSourceNames.stream()
-                .map(DiscoverySelectors::selectClass)
-                .collect(Collectors.toList());
-            profilesRunDescription = String.format("%d specified profile(s): %s",
-                args.length, String.join(", ", args));
-            System.out.printf("Running specified profiles...%n");
-        }
-
-        System.out.println(profilesRunDescription);
-        runCupping(selectors);
-    }
-
-    private static void runCupping(List<DiscoverySelector> selectors) {
-        new java.io.File("reports/").mkdirs();
-
-
-        // 1. Build the Discovery Request
-        LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-                .selectors(selectors)
-                // Filter to only run JUnit Jupiter profiles
-                .filters(EngineFilter.includeEngines("junit-jupiter"))
-                .build();
-
-        // 2. Configure and Create the Launcher
-        LauncherConfig config = LauncherConfig.builder()
-                // Use the console listener for real-time output
-                .addTestExecutionListeners(new SimpleTestExecutionListener())
-                // Add the XML report listener
-                .addTestExecutionListeners(new JUnitXmlReportListener("reports/test-results.xml"))
-                .build();
-
-        Launcher launcher = LauncherFactory.create(config);
-
-        // 3. Discover, Execute, and Report
-        try {
-            TestPlan testPlan = launcher.discover(request);
-            if (testPlan.containsTests()) {
-                launcher.execute(testPlan);
-            } else {
-                System.err.println("Error: No profiles found for the specified selection.");
-                System.err.println("Check if your classes are compiled and in the classpath.");
+            List<String> allClassNames = findAllClassNames(new File("target/test/"), new File("target/test/"));
+            for (String className : allClassNames) {
+                System.out.println("Adding Dynamic Class -> " + className);
+                requestBuilder.selectors(DiscoverySelectors.selectClass(className));
             }
-        } catch (Exception e) {
-            System.err.println("An unexpected error occurred during cupping:");
-            e.printStackTrace();
         }
-    }
 
-    // --- 4. Example Test Class (Cupping Sample) ---
+        LauncherDiscoveryRequest request = requestBuilder.build();
+
+        // Create test launcher
+        Launcher launcher = LauncherFactory.create();
+
+        // Set up listeners
+        SummaryGeneratingListener summaryListener = new SummaryGeneratingListener();
+        Path reportsDir = Path.of(System.getProperty("test.report.output", "reports/"));
+
+        PrintWriter out = new PrintWriter(System.out);
+        LegacyXmlReportGeneratingListener xmlListener = new LegacyXmlReportGeneratingListener(reportsDir, out);
+
+        // Register both listeners
+        launcher.registerTestExecutionListeners(summaryListener, xmlListener);
+
+        // Execute tests
+        launcher.execute(request);
+
+        // Print summary to console
+        TestExecutionSummary summary = summaryListener.getSummary();
+    
+        long total = summary.getTestsFoundCount();
+        long succeeded = summary.getTestsSucceededCount();
+        long failed = summary.getTestsFailedCount();
+        long skipped = summary.getTestsSkippedCount();
+        long aborted = summary.getTestsAbortedCount(); // Optional, for more granularity
+        long started = summary.getTestsStartedCount(); // May help for more accuracy
+
+        System.out.println("========== Test Summary ==========");
+        System.out.println("📄 Total tests:   " + total);
+        System.out.println("✅ Passed:        " + succeeded);
+        System.out.println("❌ Failed:        " + failed);
+        System.out.println("⏩ Skipped:       " + skipped);
+        System.out.println("🚫 Aborted:       " + aborted);
+        System.out.println("==================================");
+
+        // Optional: print errors or failures
+        if (summary.getTotalFailureCount() > 0) {
+            System.out.println("\n❌ Some tests failed:");
+            for (TestExecutionSummary.Failure failure : summary.getFailures()) {
+                System.out.println("- " + failure.getTestIdentifier().getDisplayName());
+                System.out.println("  " + failure.getException().getMessage());
+            }
+        } else {
+            System.out.println("\n✅ All tests passed.");
+        }
+
+        System.out.println("📄 XML reports written to: " + reportsDir.toAbsolutePath());
+    }
 
     /**
-     * An example class to demonstrate that the Cupping runner works.
-     * Functions as a small "sample" in the cupping process.
+     * Recursively finds all .class files and returns fully qualified class names.
      */
-    public static class CuppingSample {
-
-        @Test
-        void cleanFinishTest() {
-            // A "clean finish" suggests a successful, expected result.
-            Assertions.assertEquals(4, 2 + 2, "Aroma and body should be balanced.");
+    private static List<String> findAllClassNames(File root, File current) {
+        List<String> classNames = new ArrayList<>();
+        for (File file : Objects.requireNonNull(current.listFiles())) {
+            if (file.isDirectory()) {
+                classNames.addAll(findAllClassNames(root, file));
+            } else if (file.getName().endsWith(".class") && !file.getName().contains("$")) {
+                String relPath = root.toURI().relativize(file.toURI()).getPath();
+                String className = relPath.replace("/", ".").replace(".class", "");
+                classNames.add(className);
+            }
         }
-
-        @Test
-        void complexBodyTest() {
-            // Testing a more complex assertion.
-            Assertions.assertTrue(!"java".contains("python"));
-        }
-        
-        @Test
-        void taintedFlavorTest() {
-            // A "tainted flavor" suggests an unexpected failure/fault.
-            Assertions.fail("This profile contains a sour, unwanted note.");
-        }
+        return classNames;
     }
 }

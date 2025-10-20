@@ -25,5 +25,9 @@ project:
     artifactId: junit-jupiter-engine
     version: 5.13.0-M3
     scope: runtime
+  - groupId: org.junit.platform
+    artifactId: junit-platform-reporting
+    version: 1.13.0-M3
+    scope: runtime
   tasks:
     clean: rm -rf target/
