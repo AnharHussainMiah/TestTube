@@ -1,0 +1,81 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build TestTube Plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: download Grind tool
+        run: wget -O grind https://github.com/AnharHussainMiah/grind/releases/download/v0.6.0-alpha/grind-x86_64-unknown-linux-musl
+
+      - name: Make binary executable
+        run: chmod +x grind
+      
+      - name: Move to local path
+        run: sudo mv grind /usr/local/bin/
+
+      - name: Download all dependencies
+        run: grind install
+
+      - name: Create the plugin folder
+        run: mkdir -p plugin
+      
+      - name: Copy libs over
+        run: cp -r libs plugin/
+
+      - name: Build the jar
+        run: grind build
+
+      - name: Copy jar over
+        run: cp build/*.jar plugin/
+
+      - name: Create the checksum
+        run: grind integrity generate libs/
+
+      - name: Zip it up
+        run: zip -r TestTube.zip plugins/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestTube Plugin
+          path: TestTube.zip
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TestTube Plugin
+          path: TestTube.zip
+
+      - name: Display downloaded files
+        run: ls -lh dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            TestTube.zip
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
