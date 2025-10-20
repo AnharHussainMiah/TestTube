@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build TestTube Plugin
+    name: Build TestTube Plugin v1
     runs-on: ubuntu-latest
 
     steps:
