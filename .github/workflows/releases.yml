@@ -70,7 +70,7 @@ jobs:
           path: TestTube.zip
 
       - name: Display downloaded files
-        run: ls -lh dist
+        run: ls -lh
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
