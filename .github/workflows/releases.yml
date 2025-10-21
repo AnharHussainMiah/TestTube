@@ -48,9 +48,9 @@ jobs:
           echo "==> generating bundle checksum.."
           grind integrity generate TestTube/
           echo "==> removing any old zip files"
-          rm -rf TestTube.zip
+          rm -rf TestTubeFinal.zip
           echo "==> creating new zip bundle..."
-          zip -r TestTube.zip TestTube/
+          zip -r TestTubeFinal.zip TestTube/
           echo "==> debug show current state"
           ls -la
 
@@ -58,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TestTube Plugin
-          path: TestTube.zip
+          path: TestTubeFinal.zip
 
   release:
     needs: build
@@ -69,7 +69,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: TestTube Plugin
-          path: TestTube.zip
+          path: TestTubeFinal.zip
 
       - name: Display downloaded files
         run: ls -lh
@@ -77,7 +77,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: TestTube.zip
+          files: TestTubeFinal.zip
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
