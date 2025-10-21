@@ -51,6 +51,8 @@ jobs:
           rm -rf TestTube.zip
           echo "==> creating new zip bundle..."
           zip -r TestTube.zip TestTube/
+          echo "==> debug show current state"
+          ls -la
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
