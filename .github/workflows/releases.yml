@@ -36,7 +36,7 @@ jobs:
           echo "==> clean any old TestTube Directory"
           rm -rf TestTube/
           echo "==> creating TestTube Directory"
-          mkdir -p TestTube
+          mkdir TestTube
           echo "==> copying libs over"
           cp -r libs TestTube/
           echo "==> building jar"
