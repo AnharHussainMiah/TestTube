@@ -33,18 +33,18 @@ jobs:
 
       - name: Compile plugin and bundle it
         run: |
+          echo "==> building jar"
+          grind build
           echo "==> clean any old TestTube Directory"
           rm -rf TestTube/
           echo "==> creating TestTube Directory"
-          mkdir TestTube
+          mkdir -p TestTube
           echo "==> copying libs over"
           cp -r libs TestTube/
-          echo "==> building jar"
-          grind build
           echo "==> debug show current state"
           ls -l
           echo "==> copying jar over"
-          cp build/TestTube.jar TestTube/
+          cp build/*.jar TestTube/
           echo "==> generating bundle checksum.."
           grind integrity generate TestTube/
           echo "==> removing any old zip files"
