@@ -41,8 +41,10 @@ jobs:
           cp -r libs TestTube/
           echo "==> building jar"
           grind build
+          echo "==> debug show current state"
+          ls -l
           echo "==> copying jar over"
-          cp build/*.jar TestTube/
+          cp build/TestTube.jar TestTube/
           echo "==> generating bundle checksum.."
           grind integrity generate TestTube/
           echo "==> removing any old zip files"
