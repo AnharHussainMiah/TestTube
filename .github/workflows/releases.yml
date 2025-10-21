@@ -22,35 +22,24 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: download Grind tool
-        run: wget -O grind https://github.com/AnharHussainMiah/grind/releases/download/v0.6.1-alpha/grind-x86_64-unknown-linux-musl
-
-      - name: Make binary executable
-        run: chmod +x grind
-      
-      - name: Move to local path
-        run: sudo mv grind /usr/local/bin/
+      - name: download Grind and setup
+        run: |
+          wget -O grind https://github.com/AnharHussainMiah/grind/releases/download/v0.6.1-alpha/grind-x86_64-unknown-linux-musl
+          chmod +x grind
+          sudo mv grind /usr/local/bin/
 
       - name: Download all dependencies
         run: grind install
 
-      - name: Create the plugin folder
-        run: mkdir -p plugin
-      
-      - name: Copy libs over
-        run: cp -r libs plugin/
-
-      - name: Build the jar
-        run: grind build
-
-      - name: Copy jar over
-        run: cp build/*.jar plugin/
-
-      - name: Create the checksum
-        run: grind integrity generate libs/
-
-      - name: Zip it up
-        run: zip -r TestTube.zip plugin/
+      - name: Compile plugin and bundle it
+        run: | 
+          mkdir -p TestTube
+          cp -r libs TestTube/
+          grind build
+          cp build/*.jar TestTube/
+          grind integrity generate TestTube/
+          rm -rf TestTube.zip
+          zip -r TestTube.zip TestTube/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -75,8 +64,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            TestTube.zip
+          files: TestTube.zip
 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
