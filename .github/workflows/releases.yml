@@ -33,6 +33,8 @@ jobs:
 
       - name: Compile plugin and bundle it
         run: |
+          echo "==> clean any old TestTube Directory"
+          rm -rf TestTube/
           echo "==> creating TestTube Directory"
           mkdir -p TestTube
           echo "==> copying libs over"
