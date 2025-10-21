@@ -32,13 +32,20 @@ jobs:
         run: grind install
 
       - name: Compile plugin and bundle it
-        run: | 
+        run: |
+          echo "==> creating TestTube Directory"
           mkdir -p TestTube
+          echo "==> copying libs over"
           cp -r libs TestTube/
+          echo "==> building jar"
           grind build
+          echo "==> copying jar over"
           cp build/*.jar TestTube/
+          echo "==> generating bundle checksum.."
           grind integrity generate TestTube/
+          echo "==> removing any old zip files"
           rm -rf TestTube.zip
+          echo "==> creating new zip bundle..."
           zip -r TestTube.zip TestTube/
 
       - name: Upload artifact
